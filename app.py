@@ -75,4 +75,4 @@ with gr.Blocks() as demo:
             outputs=[original_box, translated_box, audio_output]
         )
 
-demo.launch()
+demo.launch(share = True)
