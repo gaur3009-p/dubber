@@ -15,9 +15,9 @@ def clone_voice(audio_path, voice_name="UserVoice"):
         "xi-api-key": API_KEY
     }
 
-    files = {
-        "files": open(audio_path, "rb")
-    }
+    files = [
+        ("files", (audio_path, open(audio_path, "rb"), "audio/wav"))
+    ]
 
     data = {
         "name": f"{voice_name}_{uuid.uuid4()}"
@@ -25,8 +25,15 @@ def clone_voice(audio_path, voice_name="UserVoice"):
 
     response = requests.post(url, headers=headers, files=files, data=data)
 
-    return response.json()["voice_id"]
+    if response.status_code != 200:
+        raise Exception(f"API Error {response.status_code}: {response.text}")
 
+    response_data = response.json()
+
+    if "voice_id" not in response_data:
+        raise Exception(f"Voice cloning failed: {response_data}")
+
+    return response_data["voice_id"]
 
 def generate_speech(text, voice_id):
 
