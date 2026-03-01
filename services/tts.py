@@ -1,15 +1,36 @@
 import requests
 import os
-from dotenv import load_dotenv
 import uuid
+from dotenv import load_dotenv
 
 load_dotenv()
 
 API_KEY = os.getenv("ELEVEN_API_KEY")
-VOICE_ID = os.getenv("VOICE_ID")
 
-def generate_speech(text):
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
+def clone_voice(audio_path, voice_name="UserVoice"):
+
+    url = "https://api.elevenlabs.io/v1/voices/add"
+
+    headers = {
+        "xi-api-key": API_KEY
+    }
+
+    files = {
+        "files": open(audio_path, "rb")
+    }
+
+    data = {
+        "name": f"{voice_name}_{uuid.uuid4()}"
+    }
+
+    response = requests.post(url, headers=headers, files=files, data=data)
+
+    return response.json()["voice_id"]
+
+
+def generate_speech(text, voice_id):
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 
     headers = {
         "xi-api-key": API_KEY,
