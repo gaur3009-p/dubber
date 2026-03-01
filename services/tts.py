@@ -9,6 +9,11 @@ API_KEY = os.getenv("ELEVEN_API_KEY")
 
 def clone_voice(audio_path, voice_name="UserVoice"):
 
+    API_KEY = os.getenv("ELEVEN_API_KEY")
+
+    if not API_KEY:
+        raise Exception("ELEVEN_API_KEY is not set!")
+
     url = "https://api.elevenlabs.io/v1/voices/add"
 
     headers = {
@@ -28,8 +33,7 @@ def clone_voice(audio_path, voice_name="UserVoice"):
     if response.status_code != 200:
         raise Exception(f"API Error {response.status_code}: {response.text}")
 
-    response_data = response.json()
-
+    return response.json()["voice_id"]
     if "voice_id" not in response_data:
         raise Exception(f"Voice cloning failed: {response_data}")
 
