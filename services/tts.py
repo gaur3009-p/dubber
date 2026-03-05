@@ -1,63 +1,47 @@
-import requests
+from elevenlabs.client import ElevenLabs
 import os
 import uuid
-from dotenv import load_dotenv
 
-load_dotenv()
 
-API_KEY = os.getenv("ELEVEN_API_KEY")
+def get_client():
+    api_key = os.getenv("ELEVEN_API_KEY")
 
-def clone_voice(audio_path, voice_name="UserVoice"):
+    if not api_key:
+        raise Exception("ELEVEN_API_KEY environment variable not set")
 
-    API_KEY = os.getenv("ELEVEN_API_KEY")
+    return ElevenLabs(api_key=api_key)
 
-    if not API_KEY:
-        raise Exception("ELEVEN_API_KEY is not set!")
 
-    url = "https://api.elevenlabs.io/v1/voices/add"
+def clone_voice(audio_path):
 
-    headers = {
-        "xi-api-key": API_KEY
-    }
+    client = get_client()
 
-    files = [
-        ("files", (audio_path, open(audio_path, "rb"), "audio/wav"))
-    ]
+    if not os.path.exists(audio_path):
+        raise Exception(f"Audio file not found: {audio_path}")
 
-    data = {
-        "name": f"{voice_name}_{uuid.uuid4()}"
-    }
+    with open(audio_path, "rb") as f:
+        voice = client.voices.add(
+            name=f"user_voice_{uuid.uuid4()}",
+            files=[f]
+        )
 
-    response = requests.post(url, headers=headers, files=files, data=data)
+    return voice.voice_id
 
-    if response.status_code != 200:
-        raise Exception(f"API Error {response.status_code}: {response.text}")
-
-    return response.json()["voice_id"]
-    if "voice_id" not in response_data:
-        raise Exception(f"Voice cloning failed: {response_data}")
-
-    return response_data["voice_id"]
 
 def generate_speech(text, voice_id):
 
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    client = get_client()
 
-    headers = {
-        "xi-api-key": API_KEY,
-        "Content-Type": "application/json"
-    }
+    audio = client.text_to_speech.convert(
+        text=text,
+        voice_id=voice_id,
+        model_id="eleven_multilingual_v2",
+        output_format="mp3_44100_128"
+    )
 
-    payload = {
-        "text": text,
-        "model_id": "eleven_multilingual_v2"
-    }
+    output_file = f"output_{uuid.uuid4()}.mp3"
 
-    response = requests.post(url, json=payload, headers=headers)
+    with open(output_file, "wb") as f:
+        f.write(audio)
 
-    filename = f"output_{uuid.uuid4()}.mp3"
-
-    with open(filename, "wb") as f:
-        f.write(response.content)
-
-    return filename
+    return output_file
