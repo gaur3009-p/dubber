@@ -1,43 +1,69 @@
 import gradio as gr
 import uuid
-import shutil
+
 from services.asr import transcribe_audio
 from services.translate import translate_text
 from services.tts import clone_voice, generate_speech
 
+
+# Store voice id for session
 current_voice_id = None
 
-def register_voice(audio_file):
+
+# -----------------------------
+# Voice Cloning Function
+# -----------------------------
+def register_voice(audio_path):
 
     global current_voice_id
 
-    temp_filename = f"voice_{uuid.uuid4()}.wav"
-    shutil.copy(audio_file, temp_filename)
+    if audio_path is None:
+        return "Please record a voice sample first."
 
-    voice_id = clone_voice(temp_filename)
-    current_voice_id = voice_id
+    try:
+        voice_id = clone_voice(audio_path)
 
-    return f"Voice cloned successfully! Voice ID: {voice_id}"
+        current_voice_id = voice_id
+
+        return f"Voice cloned successfully! Voice ID: {voice_id}"
+
+    except Exception as e:
+        return f"Voice cloning failed: {str(e)}"
 
 
-def translate_and_speak(audio_file, target_lang):
+# -----------------------------
+# Translate + Speak Function
+# -----------------------------
+def translate_and_speak(audio_path, target_lang):
 
     global current_voice_id
 
     if current_voice_id is None:
-        return "Please clone voice first", "", None
+        return "Clone your voice first.", "", None
 
-    temp_filename = f"temp_{uuid.uuid4()}.wav"
-    shutil.copy(audio_file, temp_filename)
+    if audio_path is None:
+        return "Please record speech.", "", None
 
-    original_text = transcribe_audio(temp_filename)
-    translated_text = translate_text(original_text, target_lang)
+    try:
 
-    output_audio = generate_speech(translated_text, current_voice_id)
+        # Speech → Text
+        original_text = transcribe_audio(audio_path)
 
-    return original_text, translated_text, output_audio
+        # Translate
+        translated_text = translate_text(original_text, target_lang)
+
+        # Generate speech
+        audio_output = generate_speech(translated_text, current_voice_id)
+
+        return original_text, translated_text, audio_output
+
+    except Exception as e:
+        return f"Error: {str(e)}", "", None
 
 
+# -----------------------------
+# Language Options
+# -----------------------------
 language_options = {
     "English": "eng_Latn",
     "Hindi": "hin_Deva",
@@ -45,13 +71,25 @@ language_options = {
     "Spanish": "spa_Latn"
 }
 
+
+# -----------------------------
+# Gradio UI
+# -----------------------------
 with gr.Blocks() as demo:
 
-    gr.Markdown("## Phase 1 – Multilingual Voice Cloner")
+    gr.Markdown("# 🎙 Multilingual Voice Cloner (Phase 1)")
+    gr.Markdown("Clone your voice → Speak → Hear translation in your voice")
 
+    # -------- Voice Cloning Tab --------
     with gr.Tab("1️⃣ Clone Your Voice"):
-        voice_sample = gr.Audio(type="filepath", label="Record 15 seconds of clear speech")
+
+        voice_sample = gr.Audio(
+            type="filepath",
+            label="Record 15 seconds of your voice"
+        )
+
         clone_btn = gr.Button("Clone Voice")
+
         clone_output = gr.Textbox(label="Clone Status")
 
         clone_btn.click(
@@ -60,13 +98,25 @@ with gr.Blocks() as demo:
             outputs=clone_output
         )
 
+    # -------- Translation Tab --------
     with gr.Tab("2️⃣ Translate & Speak"):
-        speech_input = gr.Audio(type="filepath", label="Speak something")
-        lang_dropdown = gr.Dropdown(choices=list(language_options.keys()), label="Target Language")
+
+        speech_input = gr.Audio(
+            type="filepath",
+            label="Speak something"
+        )
+
+        lang_dropdown = gr.Dropdown(
+            choices=list(language_options.keys()),
+            label="Target Language"
+        )
+
         translate_btn = gr.Button("Translate & Speak")
 
         original_box = gr.Textbox(label="Original Text")
+
         translated_box = gr.Textbox(label="Translated Text")
+
         audio_output = gr.Audio(label="Cloned Voice Output")
 
         translate_btn.click(
@@ -75,4 +125,8 @@ with gr.Blocks() as demo:
             outputs=[original_box, translated_box, audio_output]
         )
 
+
+# -----------------------------
+# Launch App
+# -----------------------------
 demo.launch(share = True)
