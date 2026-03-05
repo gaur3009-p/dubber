@@ -1,20 +1,24 @@
 from faster_whisper import WhisperModel
+import torch
 
-# Choose model size:
-# tiny, base, small, medium, large-v3
-model_size = "base"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+compute = "float16" if device == "cuda" else "int8"
 
 model = WhisperModel(
-    model_size,
-    device="cuda",  # change to "cpu" if no GPU
-    compute_type="float16"  # use "int8" for CPU
+    "base",
+    device=device,
+    compute_type=compute
 )
 
-def transcribe_audio(file_path):
-    segments, info = model.transcribe(file_path)
 
-    full_text = ""
+def transcribe_audio(audio_path):
+
+    segments, _ = model.transcribe(audio_path)
+
+    text = ""
+
     for segment in segments:
-        full_text += segment.text + " "
+        text += segment.text + " "
 
-    return full_text.strip()
+    return text.strip()
