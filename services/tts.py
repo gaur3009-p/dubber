@@ -1,37 +1,62 @@
-from elevenlabs.client import ElevenLabs
+import requests
 import os
 import uuid
+from elevenlabs.client import ElevenLabs
 
 
-def get_client():
+def get_api_key():
     api_key = os.getenv("ELEVEN_API_KEY")
 
     if not api_key:
         raise Exception("ELEVEN_API_KEY environment variable not set")
 
-    return ElevenLabs(api_key=api_key)
+    return api_key
 
 
+# ----------------------------
+# Voice Cloning (REST API)
+# ----------------------------
 def clone_voice(audio_path):
 
-    client = get_client()
+    api_key = get_api_key()
 
-    if not os.path.exists(audio_path):
-        raise Exception(f"Audio file not found: {audio_path}")
+    url = "https://api.elevenlabs.io/v1/voices/add"
 
-    with open(audio_path, "rb") as audio_file:
+    headers = {
+        "xi-api-key": api_key
+    }
 
-        voice = client.voices.create(
-            name=f"user_voice_{uuid.uuid4()}",
-            files=[audio_file]
-        )
+    files = [
+        ("files", (audio_path, open(audio_path, "rb"), "audio/wav"))
+    ]
 
-    return voice.voice_id
+    data = {
+        "name": f"user_voice_{uuid.uuid4()}"
+    }
+
+    response = requests.post(
+        url,
+        headers=headers,
+        files=files,
+        data=data
+    )
+
+    if response.status_code != 200:
+        raise Exception(f"Voice cloning failed: {response.text}")
+
+    result = response.json()
+
+    return result["voice_id"]
 
 
+# ----------------------------
+# Speech Generation (SDK)
+# ----------------------------
 def generate_speech(text, voice_id):
 
-    client = get_client()
+    api_key = get_api_key()
+
+    client = ElevenLabs(api_key=api_key)
 
     audio = client.text_to_speech.convert(
         text=text,
