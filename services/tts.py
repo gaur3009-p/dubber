@@ -19,10 +19,11 @@ def clone_voice(audio_path):
     if not os.path.exists(audio_path):
         raise Exception(f"Audio file not found: {audio_path}")
 
-    with open(audio_path, "rb") as f:
-        voice = client.voices.add(
+    with open(audio_path, "rb") as audio_file:
+
+        voice = client.voices.create(
             name=f"user_voice_{uuid.uuid4()}",
-            files=[f]
+            files=[audio_file]
         )
 
     return voice.voice_id
